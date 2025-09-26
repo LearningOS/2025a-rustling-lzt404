@@ -2,7 +2,7 @@
 	single linked list merge
 	This problem requires you to merge two ordered singly linked lists into one ordered singly linked list
 */
-// I AM NOT DONE
+
 
 use std::fmt::{self, Display, Formatter};
 use std::ptr::NonNull;
@@ -70,14 +70,78 @@ impl<T> LinkedList<T> {
         }
     }
 	pub fn merge(list_a:LinkedList<T>,list_b:LinkedList<T>) -> Self
-	{
-		//TODO
-		Self {
-            length: 0,
-            start: None,
-            end: None,
+    where
+        T: PartialOrd,
+    {
+        let mut a = list_a;
+        let mut b = list_b;
+        let mut res = LinkedList::new();
+
+        // merge until one list is exhausted
+        while a.start.is_some() && b.start.is_some() {
+            let a_ptr = a.start.unwrap();
+            let b_ptr = b.start.unwrap();
+
+            let take_a = unsafe { &(*a_ptr.as_ptr()).val } <= unsafe { &(*b_ptr.as_ptr()).val };
+
+            let node_ptr = if take_a {
+                // detach head from a
+                let node = a.start.unwrap();
+                a.start = unsafe { (*node.as_ptr()).next };
+                if a.start.is_none() {
+                    a.end = None;
+                }
+                a.length = a.length.saturating_sub(1);
+                node
+            } else {
+                // detach head from b
+                let node = b.start.unwrap();
+                b.start = unsafe { (*node.as_ptr()).next };
+                if b.start.is_none() {
+                    b.end = None;
+                }
+                b.length = b.length.saturating_sub(1);
+                node
+            };
+
+            // detach node.next and append to res
+            unsafe { (*node_ptr.as_ptr()).next = None };
+            match res.end {
+                None => res.start = Some(node_ptr),
+                Some(end_ptr) => unsafe { (*end_ptr.as_ptr()).next = Some(node_ptr) },
+            }
+            res.end = Some(node_ptr);
+            res.length += 1;
         }
-	}
+
+        // append remaining nodes from a
+        if a.start.is_some() {
+            if res.end.is_none() {
+                res.start = a.start;
+                res.end = a.end;
+                res.length = a.length;
+            } else {
+                unsafe { (*res.end.unwrap().as_ptr()).next = a.start };
+                res.end = a.end;
+                res.length += a.length;
+            }
+        }
+
+        // append remaining nodes from b
+        if b.start.is_some() {
+            if res.end.is_none() {
+                res.start = b.start;
+                res.end = b.end;
+                res.length = b.length;
+            } else {
+                unsafe { (*res.end.unwrap().as_ptr()).next = b.start };
+                res.end = b.end;
+                res.length += b.length;
+            }
+        }
+
+        res
+    }
 }
 
 impl<T> Display for LinkedList<T>
